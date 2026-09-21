@@ -104,8 +104,20 @@ if (!redisUrl) {
 let redisClient;
 
 async function setupRedis() {
-  redisClient = createClient({ url: redisUrl });
+  const reconnectStrategy = (retries) => {
+    if (retries > 20) {
+      console.error('Redis: превышено число попыток переподключения, останавливаемся.');
+      return new Error('Too many Redis reconnect attempts');
+    }
+    const delay = Math.min(retries * 500, 5000);
+    console.warn(`Redis: переподключение (попытка ${retries}), пауза ${delay} мс…`);
+    return delay;
+  };
+
+  redisClient = createClient({ url: redisUrl, socket: { reconnectStrategy } });
   redisClient.on('error', (e) => console.error('Redis error', e));
+  redisClient.on('reconnecting', () => console.warn('Redis: соединение потеряно, пробуем восстановить…'));
+  redisClient.on('ready', () => console.log('Redis: соединение (вос)становлено, готов к работе'));
   await redisClient.connect();
 
   const pubClient = redisClient.duplicate();
