@@ -40,6 +40,21 @@ const MAX_MESSAGES = 200; // сколько последних сообщени�
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024; // ~8 МБ на файл (фото/гифка/видео), оценка по base64
 const MAX_AVATAR_CHARS = 1_500_000; // ограничение на длину base64-аватарки в Firestore-документе
 
+// ---------- Ограничение частоты сообщений (защита от флуда) ----------
+const RATE_LIMIT_MAX = 5;             // не больше 5 сообщений...
+const RATE_LIMIT_WINDOW_MS = 10_000;  // ...за 10 секунд от одного пользователя
+const messageRateMap = new Map();     // uid -> { count, windowStart }
+
+function isRateLimited(uid) {
+  const now = Date.now();
+  const entry = messageRateMap.get(uid);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    messageRateMap.set(uid, { count: 1, windowStart: now });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > RATE_LIMIT_MAX;
+}
 // Чтобы неожиданная ошибка где-то в асинхронном коде не роняла весь процесс
 // молча — Render в таком случае просто перезапускает сервис без объяснений,
 // а в логах теперь будет видно, что именно произошло.
@@ -373,10 +388,15 @@ io.on('connection', (socket) => {
   // остаётся рабочим и слышит события (иначе сообщения улетали бы в никуда).
   trackSocket(socket.user.uid, socket);
   socket.join(GENERAL_ROOM);
-
+  
   socket.on('message', async (payload) => {
     const roomId = String(payload?.roomId || GENERAL_ROOM);
     if (!(await isMember(socket.user.uid, roomId))) return;
+
+    if (isRateLimited(socket.user.uid)) {
+      socket.emit('chat-error', { message: 'Слишком много сообщений подряд — подожди немного.' });
+      return;
+    }
 
     const text = String(payload?.text || '').slice(0, 2000);
 
@@ -394,7 +414,6 @@ io.on('connection', (socket) => {
         name: String(payload.media.name || '').slice(0, 200),
       };
     }
-
     if (!text && !media) return;
 
     const message = {
