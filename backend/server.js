@@ -37,7 +37,7 @@ const dmsCol = db.collection('dms');
 // ---------- Константы ----------
 const GENERAL_ROOM = 'general';
 const MAX_MESSAGES = 200; // сколько последних сообщений хранить на комнату
-const MAX_MEDIA_BYTES = 8 * 1024 * 1024; // ~8 МБ на файл (фото/гифка/видео), оценка по base64
+const MAX_MEDIA_BYTES = 3 * 1024 * 1024; // ~3 МБ на файл — меньше нагрузка на Redis и браузер
 const MAX_AVATAR_CHARS = 1_500_000; // ограничение на длину base64-аватарки в Firestore-документе
 
 // ---------- Ограничение частоты сообщений (защита от флуда) ----------
@@ -388,7 +388,7 @@ io.on('connection', (socket) => {
   // остаётся рабочим и слышит события (иначе сообщения улетали бы в никуда).
   trackSocket(socket.user.uid, socket);
   socket.join(GENERAL_ROOM);
-  
+
   socket.on('message', async (payload) => {
     const roomId = String(payload?.roomId || GENERAL_ROOM);
     if (!(await isMember(socket.user.uid, roomId))) return;

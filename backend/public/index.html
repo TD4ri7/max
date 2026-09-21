@@ -404,7 +404,7 @@
   };
   // Бэкенд и фронтенд теперь на одном сервисе — используем текущий адрес.
   const BACKEND_URL = window.location.origin;
-  const MAX_FILE_BYTES = 8 * 1024 * 1024; // должно совпадать с MAX_MEDIA_BYTES на сервере
+  const MAX_FILE_BYTES = 3 * 1024 * 1024; // должно совпадать с MAX_MEDIA_BYTES на сервере
   // ---------------------------------------------------
 
   const app = initializeApp(firebaseConfig);
@@ -744,8 +744,8 @@
     let mediaHtml = '';
     if (msg.media && msg.media.data) {
       mediaHtml = msg.media.type === 'video'
-        ? `<video src="${msg.media.data}" controls></video>`
-        : `<img src="${msg.media.data}" alt="${escapeAttr(msg.media.name || '')}" />`;
+        ? `<video src="${msg.media.data}" controls preload="none"></video>`
+        : `<img src="${msg.media.data}" alt="${escapeAttr(msg.media.name || '')}" loading="lazy" />`;
     }
     const textHtml = msg.text ? `<div class="msg-text">${escapeHtml(msg.text)}</div>` : '';
     div.innerHTML = `<span class="name">${escapeHtml(msg.name || 'Без имени')}</span>${mediaHtml}${textHtml}`;
@@ -905,17 +905,17 @@
     const selected = new Map();
 
     function renderSelected() {
-      const listEl = document.getElementById('groupSelectedList');
+      const listEl = document.getElementById('groupSelectedList'  
       listEl.innerHTML = [...selected.values()].map((u) => `
-        <span class="chip">${escapeHtml(u.name)}<button type="button" data-uid="${escapeAttr(u.uid)}" class="chip-remove">✕</button></span>
+        <span class="chip">${escapeHtml(u.name)}<button type="bu  on" data-uid="${escapeAttr(u.uid)}" class="chip-remove">✕</button></span>
       `).join('');
-      listEl.querySelectorAll('.chip-remove').forEach((btn) => {
-        btn.addEventListener('click', () => { selected.delete(btn.dataset.uid); renderSelected(); });
+      listEl.querySelectorAll('.chip-remove').forEach((btn) => {  
+        btn.addEventListener('click', () => { selected.delete(bt  dataset.uid); renderSelected(); });
       });
     }
 
     let searchTimeout;
-    document.getElementById('groupSearchInput').addEventListener('input', (e) => {
+    document.getElementById('groupSearchInput').addEventListener  input', (e) => {
       clearTimeout(searchTimeout);
       const q = e.target.value.trim();
       searchTimeout = setTimeout(async () => {
